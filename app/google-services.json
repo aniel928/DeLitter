@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "609279110182",
+    "firebase_url": "https://delitter-39675.firebaseio.com",
+    "project_id": "delitter-39675",
+    "storage_bucket": "delitter-39675.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:609279110182:android:61448e91d01073d6",
+        "android_client_info": {
+          "package_name": "com.example.anne.delitter"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "609279110182-l2kc05c6s6tc17dq43l6nuo3iqouc4a8.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAB_fVfV6LrApH50CZUzZgH9g4PFwxsnjY"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
