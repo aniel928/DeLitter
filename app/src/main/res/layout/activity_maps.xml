@@ -12,14 +12,6 @@
         android:layout_height="match_parent"
         tools:context="com.example.anne.delitter.MapsActivity" />
 
-    <ImageButton
-        android:id="@+id/addNew"
-        android:layout_width="69dp"
-        android:layout_height="69dp"
-        android:layout_gravity="bottom|left"
-        android:background="@android:drawable/ic_input_add"
-        android:tint="@color/common_google_signin_btn_text_dark_default" />
-
     <RadioGroup
         android:id="@+id/chooseType"
         android:layout_width="wrap_content"
@@ -40,5 +32,17 @@
             android:layout_weight="1"
             android:text="Recycle Bins" />
     </RadioGroup>
+
+    <ImageButton
+        android:id="@+id/addNew"
+        android:layout_width="69dp"
+        android:layout_height="69dp"
+        android:layout_gravity="bottom|left"
+        android:adjustViewBounds="true"
+        android:background="@android:drawable/ic_menu_add"
+        android:backgroundTint="#003300"
+        android:cropToPadding="true"
+        android:elevation="10dp"
+        android:scaleType="fitXY" />
 
 </FrameLayout>

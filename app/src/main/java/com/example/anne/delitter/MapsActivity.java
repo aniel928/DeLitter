@@ -13,8 +13,10 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.TooltipCompat;
 import android.text.InputType;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
@@ -22,6 +24,7 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -61,36 +64,61 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 .findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
+        final DatabaseReference[] trashRef = new DatabaseReference[1];
+        final DatabaseReference[] recycleRef = new DatabaseReference[1];
+        final ValueEventListener[] trashListener = new ValueEventListener[1];
+        final ValueEventListener[] recycleListener = new ValueEventListener[1];
+
         addNew = findViewById(R.id.addNew);
         recycle = findViewById(R.id.recycle);
         trash = findViewById(R.id.trash);
 
+        TooltipCompat.setTooltipText(addNew, "Add new bin to current location");
+
         addNew.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(MapsActivity.this, "Add new", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MapsActivity.this, "Add new", Toast.LENGTH_SHORT).show();
 
+                if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                    // TODO: Consider calling
+                    //    ActivityCompat#requestPermissions
+                    // here to request the missing permissions, and then overriding
+                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
+                    //                                          int[] grantResults)
+                    // to handle the case where the user grants the permission. See the documentation
+                    // for ActivityCompat#requestPermissions for more details.
+                    return;
+                }
 
+                LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 
-                showRadioButtonDialog();
+                Location location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                double longitude = location.getLongitude();
+                double latitude = location.getLatitude();
+
+                showRadioButtonDialog(latitude, longitude);
             }
         });
 
         recycle.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(MapsActivity.this, "View recycling", Toast.LENGTH_SHORT).show();
+                if(trashListener[0] != null) {
+                    trashRef[0].removeEventListener(trashListener[0]);
+                }
+               // Toast.makeText(MapsActivity.this, "View recycling", Toast.LENGTH_SHORT).show();
                 mMap.clear();
                 //get stuff from database
-                DatabaseReference recycleRef = ref.child("recycle");
-                recycleRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                recycleRef[0] = ref.child("recycle");
+                recycleListener[0] = recycleRef[0].addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
                         for (DataSnapshot postSnapshot: dataSnapshot.getChildren()) {
                             Bin bin = postSnapshot.getValue(Bin.class);
                             MarkerOptions markerOptions = new MarkerOptions();
                             markerOptions.position(new LatLng(bin.latitude, bin.longitude));
-                            markerOptions.title("Here we are");
+                            markerOptions.title(bin.text);
                             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_BLUE));
                             mMap.addMarker(markerOptions);
                         }
@@ -107,18 +135,21 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         trash.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Toast.makeText(MapsActivity.this, "View trash", Toast.LENGTH_SHORT).show();
+                if(recycleListener[0] != null) {
+                    recycleRef[0].removeEventListener(recycleListener[0]);
+                }
+                //Toast.makeText(MapsActivity.this, "View trash", Toast.LENGTH_SHORT).show();
                 mMap.clear();
                 //get stuff from database
-                DatabaseReference trashRef = ref.child("trash");
-                trashRef.addListenerForSingleValueEvent(new ValueEventListener() {
+                trashRef[0] = ref.child("trash");
+                trashListener[0] = trashRef[0].addValueEventListener(new ValueEventListener() {
                     @Override
                     public void onDataChange(DataSnapshot dataSnapshot) {
                         for (DataSnapshot postSnapshot: dataSnapshot.getChildren()) {
                             Bin bin = postSnapshot.getValue(Bin.class);
                             MarkerOptions markerOptions = new MarkerOptions();
                             markerOptions.position(new LatLng(bin.latitude, bin.longitude));
-                            markerOptions.title("Here we are");
+                            markerOptions.title(bin.text);
                             markerOptions.icon(BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_GREEN));
                             mMap.addMarker(markerOptions);
                         }
@@ -151,6 +182,13 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
 
+        mMap.setOnMapLongClickListener(new GoogleMap.OnMapLongClickListener() {
+            @Override
+            public void onMapLongClick(LatLng latLng) {
+                showRadioButtonDialog(latLng.latitude, latLng.longitude);
+            }
+        });
+
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
                 != PackageManager.PERMISSION_GRANTED) {
 
@@ -162,6 +200,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             mMap.setMyLocationEnabled(true);
         }
         mMap.getUiSettings().setZoomControlsEnabled(true);
+        
         zoomIn();
 
         trash.callOnClick();
@@ -197,9 +236,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    private void showRadioButtonDialog() {
+    private void showRadioButtonDialog(final double latitude, final double longitude) {
 
-        final String[] pick = new String[1];
+        final String[] pick = new String[2];
         // custom dialog
         final Dialog dialog = new Dialog(this);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -207,6 +246,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
         RadioGroup rg = dialog.findViewById(R.id.radio_group);
         Button finish = dialog.findViewById(R.id.finish);
+        final EditText tv = dialog.findViewById(R.id.plain_text_input);
 
         RadioButton rb=new RadioButton(this); // dynamically creating RadioButton and adding to RadioGroup.
         rb.setText("New Recycle Bin");
@@ -214,6 +254,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         RadioButton rb2=new RadioButton(this); // dynamically creating RadioButton and adding to RadioGroup.
         rb2.setText("New Trash Can");
         rg.addView(rb2);
+
+
 
         dialog.show();
 
@@ -234,29 +276,17 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         finish.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                LocationManager lm = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-                if (ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(MapsActivity.this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
-                    // TODO: Consider calling
-                    //    ActivityCompat#requestPermissions
-                    // here to request the missing permissions, and then overriding
-                    //   public void onRequestPermissionsResult(int requestCode, String[] permissions,
-                    //                                          int[] grantResults)
-                    // to handle the case where the user grants the permission. See the documentation
-                    // for ActivityCompat#requestPermissions for more details.
-                    return;
-                }
-                Location location = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                double longitude = location.getLongitude();
-                double latitude = location.getLatitude();
+                pick[1] = tv.getText().toString();
+
                 //  Toast.makeText(MapsActivity.this, latitude + " " + longitude, Toast.LENGTH_SHORT).show();
                 //save pick[0] to DB
-                Toast.makeText(MapsActivity.this, "Save it", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(MapsActivity.this, "Save it", Toast.LENGTH_SHORT).show();
                 if(pick[0].equals("New Trash Can")) {
                     DatabaseReference trashRef = ref.child("trash");
-                    trashRef.push().setValue(new Bin(latitude, longitude));
+                    trashRef.push().setValue(new Bin(latitude, longitude, tv.getText().toString()));
                 }else{
                     DatabaseReference recycleRef = ref.child("recycle");
-                    recycleRef.push().setValue(new Bin(latitude, longitude));
+                    recycleRef.push().setValue(new Bin(latitude, longitude, tv.getText().toString()));
                 }
                 dialog.dismiss();
             }
